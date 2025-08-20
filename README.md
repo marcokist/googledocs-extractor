@@ -1,4 +1,4 @@
-# Go Google Docs Extractor API
+## Go Google Docs Extractor API
 
 [![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8.svg)](https://golang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -111,7 +111,6 @@ Esta é a forma padrão de executar a aplicação no dia a dia.
 
 2.  **Execute o Contêiner Docker:**
     Este comando inicia um contêiner a partir da imagem que acabamos de construir.
-
     ```bash
     docker run -p 8080:8080 --rm --name my-doc-extractor -v "$(pwd)/token.json:/app/token.json" doc-extractor-api
     ```
@@ -132,3 +131,106 @@ A API aceita múltiplos parâmetros `doc_id` em todos os endpoints para processa
 ### 1. Extrair Somente Imagens
 
 ... (o resto da documentação da API continua igual)
+
+## 📖 Uso da API
+
+A API aceita múltiplos parâmetros `doc_id` em todos os endpoints para processamento em lote.
+
+---
+
+### 1. Extrair Somente Imagens
+
+Retorna uma lista de todas as imagens encontradas, com suas URLs de acesso e dados em Base64.
+
+- **Método**: `GET`
+- **Endpoint**: `/extrair`
+- **Exemplo de Requisição**:
+  ```http
+  http://localhost:8080/extrair?doc_id=ID_DOCUMENTO_1&doc_id=ID_DOCUMENTO_2
+  ```
+- **Exemplo de Resposta JSON**:
+  ```json
+  {
+    "ID_DOCUMENTO_1": {
+      "status": "success",
+      "images": [
+        {
+          "url": "/imagens/ID_DOCUMENTO_1/imagem_1.png",
+          "base64": "iVBORw0KGgoAAA..."
+        }
+      ]
+    }
+  }
+  ```
+
+---
+
+### 2. Extrair Conteúdo Completo (Texto e Imagens)
+
+Retorna uma lista ordenada de blocos de conteúdo (texto e imagem), preservando a estrutura do documento, incluindo conteúdo dentro de tabelas.
+
+- **Método**: `GET`
+- **Endpoint**: `/extrair-conteudo-completo`
+- **Exemplo de Requisição**:
+  ```http
+  http://localhost:8080/extrair-conteudo-completo?doc_id=ID_DOCUMENTO_1
+  ```
+- **Exemplo de Resposta JSON**:
+  ```json
+  {
+    "ID_DOCUMENTO_1": {
+      "status": "success",
+      "content": [
+        {
+          "type": "text",
+          "content": "Este é o primeiro parágrafo."
+        },
+        {
+          "type": "image",
+          "url": "/imagens/ID_DOCUMENTO_1/imagem_1.png",
+          "base64": "iVBORw0KGgoAAA..."
+        },
+        {
+          "type": "text",
+          "content": "Este texto vem depois da imagem."
+        }
+      ]
+    }
+  }
+  ```
+
+---
+
+### 3. Extrair Documento Completo (Raw)
+
+Retorna o objeto de documento completo e não processado da API do Google, oferecendo máxima flexibilidade para análise detalhada.
+
+- **Método**: `GET`
+- **Endpoint**: `/extrair-documento-completo`
+- **Exemplo de Requisição**:
+  ```http
+  http://localhost:8080/extrair-documento-completo?doc_id=ID_DOCUMENTO_1
+  ```
+- **Exemplo de Resposta JSON**:
+  ```json
+  {
+    "ID_DOCUMENTO_1": {
+      "documentId": "ID_DOCUMENTO_1",
+      "title": "Título do Documento",
+      "body": {
+        "content": [
+          // ... estrutura completa e detalhada de parágrafos, tabelas, etc.
+        ]
+      }
+      // ... muitos outros campos da API do Google
+    }
+  }
+  ```
+
+## 📝 Logging
+
+A aplicação utiliza o pacote `log/slog` do Go para gerar logs estruturados em formato JSON no terminal. Isso facilita a análise e integração com sistemas de monitoramento.
+
+## ⚖️ Licença
+
+Este projeto é distribuído sob a licença MIT.
