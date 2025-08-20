@@ -111,6 +111,7 @@ Esta é a forma padrão de executar a aplicação no dia a dia.
 
 2.  **Execute o Contêiner Docker:**
     Este comando inicia um contêiner a partir da imagem que acabamos de construir.
+
     ```bash
     docker run -p 8080:8080 --rm --name my-doc-extractor -v "$(pwd)/token.json:/app/token.json" doc-extractor-api
     ```
@@ -121,16 +122,6 @@ Esta é a forma padrão de executar a aplicação no dia a dia.
     - `-v "$(pwd)/token.json:/app/token.json"`: **(A parte mais importante)** Monta o `token.json` da sua máquina local para dentro do contêiner. Isso permite que a aplicação pule a etapa de autenticação interativa. (No Windows CMD, use `%cd%` no lugar de `$(pwd)`).
 
 O servidor estará rodando em `http://localhost:8080` e pronto para receber requisições, sem pedir autorização no terminal.
-
-## 📖 Uso da API
-
-A API aceita múltiplos parâmetros `doc_id` em todos os endpoints para processamento em lote.
-
----
-
-### 1. Extrair Somente Imagens
-
-... (o resto da documentação da API continua igual)
 
 ## 📖 Uso da API
 
