@@ -1,0 +1,17 @@
+# Arquivos e pastas do Git
+.git
+.gitignore
+
+# Arquivos de configuração de editores
+.vscode/
+.idea/
+
+# Arquivos gerados em tempo de execução
+token.json
+imagens_extraidas/
+
+# Binário compilado localmente (se houver)
+doc-extractor-api
+
+# Arquivos de documentação que não precisam estar na imagem
+*.md

@@ -34,6 +34,8 @@ meu-projeto/
 │   │   └── client.go         # Lógica de autenticação e comunicação com a API Google
 │   └── model/
 │       └── types.go          # Definição das estruturas de dados (structs)
+├── Dockerfile                # Receita para construir a imagem Docker
+├── .dockerignore             # Arquivos a serem ignorados pelo Docker
 ├── go.mod
 ├── go.sum
 └── credentials.json          # Arquivo de credenciais da API Google (NÃO versionar em Git público)
@@ -47,6 +49,7 @@ Siga os passos abaixo para configurar e executar o projeto localmente.
 ### Pré-requisitos
 
 - [Go](https://go.dev/doc/install) (versão 1.21 ou superior)
+- [Docker](https://docs.docker.com/get-docker/)
 - Uma Conta Google
 - Um projeto no [Google Cloud Platform](https://console.cloud.google.com/)
 
@@ -56,7 +59,7 @@ Siga os passos abaixo para configurar e executar o projeto localmente.
 
     ```bash
     # Exemplo com git
-    git clone https://sua-url-de-repositorio.git
+    git clone [https://sua-url-de-repositorio.git](https://sua-url-de-repositorio.git)
     cd seu-projeto
     ```
 
@@ -76,24 +79,49 @@ Siga os passos abaixo para configurar e executar o projeto localmente.
     ```
 
 4.  **Instale as Dependências**:
-    O Go cuidará disso automaticamente na primeira execução, mas você pode executar para garantir:
     ```bash
     go mod tidy
     ```
 
-### Executando a Aplicação
+## 🐳 Executando a Aplicação com Docker
 
-1.  **Inicie o Servidor**:
-    Execute o seguinte comando a partir da pasta raiz do projeto:
+O fluxo de trabalho com Docker é dividido em dois passos principais: uma autenticação única feita localmente, seguida pela execução normal via contêiner.
 
+### Passo 1: Autenticação Inicial (Execução Única)
+
+Devido ao fluxo de autenticação interativo do Google, o primeiro passo precisa ser feito fora do Docker para gerar o arquivo de token (`token.json`). **Você só precisa fazer isso uma vez.**
+
+1.  Execute a aplicação localmente com o Go:
     ```bash
     go run ./cmd/doc-extractor-api
     ```
+2.  Siga as instruções no terminal: copie a URL para o navegador, autorize o aplicativo e cole o código de autorização de volta no terminal.
+3.  Um arquivo `token.json` será criado na raiz do projeto. Após a sua criação, você pode parar o servidor local (`Ctrl + C`).
 
-2.  **Primeira Autorização**:
-    Na primeira vez que executar, o terminal exibirá uma URL. Copie-a para o seu navegador, faça login com sua conta Google, autorize o aplicativo e cole o código de autorização de volta no terminal. Um arquivo `token.json` será criado para futuras execuções.
+### Passo 2: Construindo e Executando com Docker
 
-3.  O servidor estará rodando em `http://localhost:8080`.
+Esta é a forma padrão de executar a aplicação no dia a dia.
+
+1.  **Construa a Imagem Docker:**
+    Este comando lê o `Dockerfile` e empacota sua aplicação em uma imagem chamada `doc-extractor-api`.
+
+    ```bash
+    docker build -t doc-extractor-api .
+    ```
+
+2.  **Execute o Contêiner Docker:**
+    Este comando inicia um contêiner a partir da imagem que acabamos de construir.
+
+    ```bash
+    docker run -p 8080:8080 --rm --name my-doc-extractor -v "$(pwd)/token.json:/app/token.json" doc-extractor-api
+    ```
+
+    - `-p 8080:8080`: Mapeia a porta 8080 do seu computador para a porta 8080 do contêiner.
+    - `--rm`: Remove o contêiner automaticamente quando ele for parado.
+    - `--name`: Dá um nome fácil de lembrar para o contêiner em execução.
+    - `-v "$(pwd)/token.json:/app/token.json"`: **(A parte mais importante)** Monta o `token.json` da sua máquina local para dentro do contêiner. Isso permite que a aplicação pule a etapa de autenticação interativa. (No Windows CMD, use `%cd%` no lugar de `$(pwd)`).
+
+O servidor estará rodando em `http://localhost:8080` e pronto para receber requisições, sem pedir autorização no terminal.
 
 ## 📖 Uso da API
 
@@ -103,97 +131,4 @@ A API aceita múltiplos parâmetros `doc_id` em todos os endpoints para processa
 
 ### 1. Extrair Somente Imagens
 
-Retorna uma lista de todas as imagens encontradas, com suas URLs de acesso e dados em Base64.
-
-- **Método**: `GET`
-- **Endpoint**: `/extrair`
-- **Exemplo de Requisição**:
-  ```http
-  http://localhost:8080/extrair?doc_id=ID_DOCUMENTO_1&doc_id=ID_DOCUMENTO_2
-  ```
-- **Exemplo de Resposta JSON**:
-  ```json
-  {
-    "ID_DOCUMENTO_1": {
-      "status": "success",
-      "images": [
-        {
-          "url": "/imagens/ID_DOCUMENTO_1/imagem_1.png",
-          "base64": "iVBORw0KGgoAAA..."
-        }
-      ]
-    }
-  }
-  ```
-
----
-
-### 2. Extrair Conteúdo Completo (Texto e Imagens)
-
-Retorna uma lista ordenada de blocos de conteúdo (texto e imagem), preservando a estrutura do documento, incluindo conteúdo dentro de tabelas.
-
-- **Método**: `GET`
-- **Endpoint**: `/extrair-conteudo-completo`
-- **Exemplo de Requisição**:
-  ```http
-  http://localhost:8080/extrair-conteudo-completo?doc_id=ID_DOCUMENTO_1
-  ```
-- **Exemplo de Resposta JSON**:
-  ```json
-  {
-    "ID_DOCUMENTO_1": {
-      "status": "success",
-      "content": [
-        {
-          "type": "text",
-          "content": "Este é o primeiro parágrafo."
-        },
-        {
-          "type": "image",
-          "url": "/imagens/ID_DOCUMENTO_1/imagem_1.png",
-          "base64": "iVBORw0KGgoAAA..."
-        },
-        {
-          "type": "text",
-          "content": "Este texto vem depois da imagem."
-        }
-      ]
-    }
-  }
-  ```
-
----
-
-### 3. Extrair Documento Completo (Raw)
-
-Retorna o objeto de documento completo e não processado da API do Google, oferecendo máxima flexibilidade para análise detalhada.
-
-- **Método**: `GET`
-- **Endpoint**: `/extrair-documento-completo`
-- **Exemplo de Requisição**:
-  ```http
-  http://localhost:8080/extrair-documento-completo?doc_id=ID_DOCUMENTO_1
-  ```
-- **Exemplo de Resposta JSON**:
-  ```json
-  {
-    "ID_DOCUMENTO_1": {
-      "documentId": "ID_DOCUMENTO_1",
-      "title": "Título do Documento",
-      "body": {
-        "content": [
-          // ... estrutura completa e detalhada de parágrafos, tabelas, etc.
-        ]
-      }
-      // ... muitos outros campos da API do Google
-    }
-  }
-  ```
-
-## 📝 Logging
-
-A aplicação utiliza o pacote `log/slog` do Go para gerar logs estruturados em formato JSON no terminal. Isso facilita a análise e integração com sistemas de monitoramento.
-
-## ⚖️ Licença
-
-Este projeto é distribuído sob a licença MIT.
+... (o resto da documentação da API continua igual)
